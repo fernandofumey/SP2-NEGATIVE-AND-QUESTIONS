@@ -99,7 +99,16 @@
                 <span id="cheat-counter-display" class="text-sm font-bold text-red-500">Alerts: <span id="cheat-number">0</span></span>
             </div>
             
-            <h2 id="question-text" class="text-2xl font-bold mb-6 text-sky-950 select-none"></h2>
+            <div class="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
+                <h2 id="question-text" class="text-2xl font-bold text-sky-950 select-none flex-1"></h2>
+                <button id="btn-read-aloud" type="button" class="flex-shrink-0 flex items-center gap-2 bg-sky-100 hover:bg-sky-200 text-sky-700 py-2 px-4 rounded-lg text-sm font-bold transition border border-sky-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                        <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06ZM18.584 5.106a.75.75 0 0 1 1.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 0 1-1.06-1.06 8.25 8.25 0 0 0 0-11.668.75.75 0 0 1 0-1.06Z" />
+                        <path d="M15.932 7.757a.75.75 0 0 1 1.061 0 6 6 0 0 1 0 8.486.75.75 0 0 1-1.06-1.061 4.5 4.5 0 0 0 0-6.364.75.75 0 0 1 0-1.06Z" />
+                    </svg>
+                    Read-Aloud
+                </button>
+            </div>
             
             <div id="options-container" class="space-y-3 mb-8">
                 <!-- Dynamic Options Injection -->
@@ -241,6 +250,7 @@
         const btnRefresh = document.getElementById('btn-refresh');
         const emailInput = document.getElementById('email');
         const emailError = document.getElementById('email-error');
+        const btnReadAloud = document.getElementById('btn-read-aloud');
 
         function shuffleArray(array) {
             let arr = [...array];
@@ -301,6 +311,8 @@
         });
 
         function loadQuestion() {
+            window.speechSynthesis.cancel(); 
+            
             const currentQ = quizQuestions[currentQuestionIndex];
             questionTracker.textContent = `Question ${currentQuestionIndex + 1} / 50`;
             questionText.textContent = currentQ.q;
@@ -309,6 +321,9 @@
             currentQ.options.forEach((opt, idx) => {
                 const label = document.createElement('label');
                 label.className = 'option-label';
+                
+                const leftDiv = document.createElement('div');
+                leftDiv.className = 'flex items-center flex-1';
                 
                 const input = document.createElement('input');
                 input.type = 'radio';
@@ -327,14 +342,44 @@
                 span.className = 'option-text';
                 span.textContent = opt;
 
-                label.appendChild(input);
-                label.appendChild(span);
+                leftDiv.appendChild(input);
+                leftDiv.appendChild(span);
+                label.appendChild(leftDiv);
+
+                const optReadBtn = document.createElement('button');
+                optReadBtn.type = 'button';
+                optReadBtn.title = 'Read this option aloud';
+                optReadBtn.className = 'ml-4 p-2 text-sky-400 hover:text-sky-700 hover:bg-sky-100 rounded-full transition focus:outline-none flex-shrink-0';
+                optReadBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 0 0 1.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06ZM18.584 5.106a.75.75 0 0 1 1.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 0 1-1.06-1.06 8.25 8.25 0 0 0 0-11.668.75.75 0 0 1 0-1.06Z" /><path d="M15.932 7.757a.75.75 0 0 1 1.061 0 6 6 0 0 1 0 8.486.75.75 0 0 1-1.06-1.061 4.5 4.5 0 0 0 0-6.364.75.75 0 0 1 0-1.06Z" /></svg>`;
+                
+                optReadBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation(); // Prevents the radio button from being selected when clicking the speaker
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(opt);
+                    utterance.lang = 'es-ES'; // Set language to Spanish for authentic pronunciation
+                    window.speechSynthesis.speak(utterance);
+                });
+
+                label.appendChild(optReadBtn);
                 optionsContainer.appendChild(label);
             });
 
             btnBack.style.display = currentQuestionIndex === 0 ? 'none' : 'block';
             btnNext.textContent = currentQuestionIndex === quizQuestions.length - 1 ? 'Submit Test' : 'Next';
         }
+
+        btnReadAloud.addEventListener('click', () => {
+            const currentQ = quizQuestions[currentQuestionIndex];
+            if (currentQ && currentQ.q) {
+                // Cancel any previous speech before starting a new one
+                window.speechSynthesis.cancel(); 
+                const utterance = new SpeechSynthesisUtterance(currentQ.q);
+                // Set language to en-US since most of the question instructions are in English
+                utterance.lang = 'en-US'; 
+                window.speechSynthesis.speak(utterance);
+            }
+        });
 
         btnBack.addEventListener('click', () => {
             if (currentQuestionIndex > 0) {
@@ -385,6 +430,8 @@
         });
 
         function finishQuiz() {
+            window.speechSynthesis.cancel();
+            
             let scoreCount = 0;
             let resultsSummaryArr = [];
             
